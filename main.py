@@ -80,6 +80,7 @@ class Movie(BaseModel):
     poster_url: str
     duration: int
     release_date: datetime
+    base_price: float  # Added base_price field
 
 
 class Theatre(BaseModel):
@@ -202,7 +203,8 @@ async def login(user: UserLogin):
 async def get_movies():
     with get_db() as conn:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM movies ORDER BY release_date DESC")
+        # Added base_price to the SELECT statement
+        cursor.execute("SELECT movie_id, title, description, genre, poster_url, duration, release_date, base_price FROM movies ORDER BY release_date DESC")
         movies = cursor.fetchall()
     return [Movie(**movie) for movie in movies]
 
@@ -211,7 +213,8 @@ async def get_movies():
 async def get_movie(movie_id: int):
     with get_db() as conn:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM movies WHERE movie_id = %s", (movie_id,))
+        # Added base_price to the SELECT statement
+        cursor.execute("SELECT movie_id, title, description, genre, poster_url, duration, release_date, base_price FROM movies WHERE movie_id = %s", (movie_id,))
         movie = cursor.fetchone()
 
     if not movie:
@@ -231,7 +234,7 @@ async def get_theatres():
 @app.get("/showtimes")
 async def get_showtimes(movie_id: Optional[int] = None, theatre_id: Optional[int] = None):
     query = """
-        SELECT s.*, m.title, m.description, m.genre, m.poster_url, m.duration, m.release_date,
+        SELECT s.*, m.title, m.description, m.genre, m.poster_url, m.duration, m.release_date, m.base_price,
                t.name as theatre_name, t.location
         FROM showtimes s
         JOIN movies m ON s.movie_id = m.movie_id
@@ -270,7 +273,8 @@ async def get_showtimes(movie_id: Optional[int] = None, theatre_id: Optional[int
                 genre=showtime["genre"],
                 poster_url=showtime["poster_url"],
                 duration=showtime["duration"],
-                release_date=showtime["release_date"]
+                release_date=showtime["release_date"],
+                base_price=showtime["base_price"]  # Added base_price
             ),
             "theatre": Theatre(
                 theatre_id=showtime["theatre_id"],

@@ -172,7 +172,15 @@
 
         .movie-genre {
             color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .movie-price {
+            color: var(--secondary);
+            font-weight: bold;
             margin-bottom: 1rem;
+            font-size: 1.1rem;
         }
 
         /* Forms */
@@ -319,22 +327,20 @@
         .hidden {
             display: none;
         }
-/* CSS */
-.center-container {
-    display: flex;
-    justify-content: center; /* Horizontal center */
+        .center-container {
+            display: flex;
+            justify-content: center;
+        }
 
-}
+        .booking-summary {
+            background: var(--surface);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            margin: 1rem 0;
+        }
 
-.booking-summary {
-    background: var(--surface);
-    padding: 1.5rem;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    margin: 1rem 0;
-}
-
-                .booking-card {
+        .booking-card {
             background: var(--surface);
             border-radius: 12px;
             padding: 1.5rem;
@@ -581,7 +587,7 @@
 
     try {
         const container = document.getElementById('bookings-container');
-        container.innerHTML = '<div class="spinner"></div>';
+        container.innerHTML = '<div class="loading">Loading...</div>';
 
         const bookings = await apiCall('/bookings/my');
 
@@ -600,7 +606,6 @@
                     <div>
                         <span style="color: var(--success);">Confirmed</span>
                          <button class="btn btn-cancel" onclick="cancelBooking('${booking.booking_id}')">Cancel Booking</button>
-
                     </div>
                 </div>
                 <div class="booking-details">
@@ -614,14 +619,13 @@
                     </div>
                     <div class="booking-detail-item">
                         <div class="booking-detail-label">Total Price</div>
-                        <div class="booking-detail-value">$${(booking.seats.length * booking.showtime.price).toFixed(2)}</div>
+                        <div class="booking-detail-value">${formatINR(booking.seats.length * booking.showtime.price)}</div>
                     </div>
                     <div class="booking-detail-item">
                         <div class="booking-detail-label">Booking ID</div>
                         <div class="booking-detail-value">${booking.booking_id}</div>
                     </div>
                 </div>
-<!--                <button class="btn cancel-btn" onclick="cancelBooking('${booking.booking_id}')">Cancel Booking</button>-->
             </div>
         `).join('');
     } catch (error) {
@@ -760,37 +764,36 @@ async function cancelBooking(bookingId) {
         } catch (error) {}
     });
 
-  async function loadMovies() {
+   async function loadMovies() {
     try {
         const movies = await apiCall('/movies');
         const container = document.getElementById('movies-container');
+        container.innerHTML = '';
 
-        container.innerHTML = movies.map(movie => {
+        movies.forEach(movie => {
             const safeTitle = encodeURIComponent(movie.title);
-
-            return `
-                <div class="movie-card">
-                    <img
-                        src="${movie.poster_url}"
-                        alt="${movie.title}"
-                        class="movie-poster"
-                        onerror="this.src='data:image/svg+xml,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;250&quot; height=&quot;300&quot; viewBox=&quot;0 0 250 300&quot;><rect width=&quot;250&quot; height=&quot;300&quot; fill=&quot;%236366f1&quot;/><text x=&quot;125&quot; y=&quot;150&quot; text-anchor=&quot;middle&quot; fill=&quot;white&quot; font-size=&quot;16&quot;>${safeTitle}</text></svg>'"
-                    >
-                    <div class="movie-info">
-                        <h3 class="movie-title">${movie.title}</h3>
-                        <p class="movie-genre">${movie.genre}</p>
-                        <p class="movie-price">Price: ₹${movie.price}</p>
-                        <button class="btn btn-primary" onclick="selectMovie(${movie.movie_id})">Book Now</button>
-                    </div>
+            const movieCard = document.createElement('div');
+            movieCard.className = 'movie-card';
+            movieCard.innerHTML = `
+                <img
+                    src="${movie.poster_url}"
+                    alt="${movie.title}"
+                    class="movie-poster"
+                    onerror="this.src='data:image/svg+xml,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;250&quot; height=&quot;300&quot; viewBox=&quot;0 0 250 300&quot;><rect width=&quot;250&quot; height=&quot;300&quot; fill=&quot;%236366f1&quot;/><text x=&quot;125&quot; y=&quot;150&quot; text-anchor=&quot;middle&quot; fill=&quot;white&quot; font-size=&quot;16&quot;>${safeTitle}</text></svg>'"
+                >
+                <div class="movie-info">
+                    <h3 class="movie-title">${movie.title}</h3>
+                    <p class="movie-genre">${movie.genre}</p>
+                    <p class="movie-price">Price ${formatINR(movie.base_price)}</p>
+                    <button class="btn btn-primary" onclick="selectMovie(${movie.movie_id})">Book Now</button>
                 </div>
             `;
-        }).join('');
+            container.appendChild(movieCard);
+        });
     } catch (error) {
         document.getElementById('movies-container').innerHTML = '<div class="error">Failed to load movies</div>';
     }
-}
-
-
+  }
 
     function selectMovie(movieId) {
         if (!currentUser) {
@@ -799,6 +802,7 @@ async function cancelBooking(bookingId) {
             return;
         }
 
+        // Get movie details from the API
         apiCall(`/movies/${movieId}`).then(movie => {
             currentMovie = movie;
             showPage('showtimes');
@@ -859,6 +863,7 @@ async function cancelBooking(bookingId) {
             document.getElementById('showtime-details').innerHTML = `
                 <h3>${currentMovie.title}</h3>
                 <p>${currentShowtime.theatre.name} - ${new Date(currentShowtime.start_time).toLocaleString()}</p>
+                <p>Price per seat: ${formatINR(currentShowtime.price)}</p>
             `;
 
             container.innerHTML = '';
